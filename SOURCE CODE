@@ -1,0 +1,294 @@
+Source code:
+#include <LiquidCrystal.h>
+#include <SoftwareSerial.h>
+LiquidCrystal lcd(13, 12, 11, 10, 9, 8);
+SoftwareSerial mySerial(2, 3);
+ #include<DHT.h>   
+ #define DHTPIN A0   
+ #define DHTTYPE DHT11
+ DHT dht ( DHTPIN, DHTTYPE ) ;
+#define BUZ 4
+#define PUMP 5
+String textMessage;
+const int S1 = A1; 
+int memsx=0,memsy=0;
+int hbtc=0,hbtc1=0,rtrl=0;
+unsigned char rcv,count,gchr='x',gchr1='x',robos='s';
+char rcvmsg[10],pastnumber[11];
+ //char pastnumber1[11],pastnumber2[11];//pastnumber3[11];
+  int ii=0,rchkr=0;
+float tempc=0,weight=0;
+float vout=0;
+int sti=0; 
+String inputString = "";         // a string to hold incoming data
+boolean stringComplete = false;  // whether the string is complete
+
+void okcheck()
+{
+  unsigned char rcr;
+  do{
+      rcr = mySerial.read();
+    }while(rcr != 'K');
+}
+void setup()
+{
+   digitalWrite(BUZ,LOW);
+   digitalWrite(PUMP,HIGH);
+  lcd.setCursor(0,0);
+  lcd.print("   WELCOME ");
+  lcd.setCursor(0,1);
+  lcd.print(" USING GSM ");
+  Serial.println("Initializing...");
+  gsminit();     
+serialEvent();
+  lcd.clear();
+}
+char memss='x';
+void loop()
+{
+int GAS = digitalRead(S1); // read new state
+int MOI = digitalRead(A2); 
+float humi; 
+float temp;
+int s=random(71,90);
+ Serial.print ( " Temp is " ) ;  
+     Serial.print ( temp ) ;      
+     Serial.println ( " *C " ) ;    
+     Serial.print ( " Humidity in % is : " ) ;                    
+     Serial.print ( humi ) ;    
+     Serial.print ( " % \t " ) ;  
+     lcd.setCursor(0,0);
+    lcd.print("H:       T:"); 
+    lcd.setCursor(0,1);
+    lcd.print("L:");
+    lcd.setCursor(9,1);
+    lcd.print("M:");
+  if(textMessage.indexOf("ON")>=0)
+{
+    digitalWrite(PUMP,LOW);
+    delay(1000);
+    Serial.println("Relay set to ON");  
+    textMessage = "";   
+  }
+  delay(1000);  
+  if(textMessage.indexOf("FF")>=0){
+      digitalWrite(PUMP,HIGH);
+      delay(1000); 
+    Serial.println("Relay set to OFF");
+    textMessage = ""; 
+  }
+delay(1000);
+if(GAS==HIGH&&MOI==LOW)
+{
+      lcd.setCursor(3,0);
+      lcd.print(humi);
+      lcd.setCursor(11,0);
+      lcd.print(temp);
+      lcd.setCursor(3,1);
+      lcd.print("LOW");
+      lcd.setCursor(11,1);
+      lcd.print("WET");
+      delay(2000);
+      lcd.clear();
+      lcd.print("WATER LEVEL LOW");
+      delay(1000);
+      lcd.setCursor(0, 1);
+      lcd.print("DETECTED....");
+      delay(1000);
+      digitalWrite(BUZ,HIGH);
+        delay(1500);
+      digitalWrite(BUZ,LOW);
+    digitalWrite(PUMP,LOW);
+    mySerial.write("AT+CMGS=\"");
+    mySerial.write(pastnumber);
+    mySerial.write("\"\r\n");  delay(3000);  
+    mySerial.write("WATER LEVEL LOW ALERT..");
+    mySerial.write(0x1A);delay(4000);delay(4000);
+      lcd.clear();
+}
+if(MOI==HIGH&&GAS==HIGH||MOI==HIGH)
+{
+      lcd.setCursor(3,0);
+      lcd.print(humi);
+      lcd.setCursor(11,0);
+      lcd.print(temp);
+      lcd.setCursor(3,1);
+      lcd.print("LOW");
+      lcd.setCursor(11,1);
+      lcd.print("DRY");
+      delay(2000);
+      lcd.clear();
+      lcd.print("SOIL DRY");
+      delay(1000);
+      lcd.setCursor(0, 1);
+      lcd.print("DETECTED....");
+      delay(1000);
+      digitalWrite(BUZ,HIGH);
+        delay(1500);
+      digitalWrite(BUZ,LOW);
+      digitalWrite(PUMP,LOW);
+    mySerial.write("AT+CMGS=\"");
+    mySerial.write(pastnumber);
+    mySerial.write("\"\r\n");  delay(3000);  
+    mySerial.write("SOIL DRY ALERT..");
+    mySerial.write(0x1A);delay(4000);delay(4000);
+      lcd.clear();
+}
+ if( temp>40)
+     {
+      lcd.setCursor(3,0);
+      lcd.print(humi);
+      lcd.setCursor(11,0);
+      lcd.print(temp);
+      lcd.setCursor(3,1);
+      lcd.print("HIGH");
+      lcd.setCursor(11,1);
+      lcd.print("WET");
+      delay(2000);
+      digitalWrite(BUZ,HIGH);
+        delay(1500);
+      digitalWrite(BUZ,LOW);
+      digitalWrite(PUMP,HIGH);
+    mySerial.write("AT+CMGS=\"");
+    mySerial.write(pastnumber);
+    mySerial.write("\"\r\n");  delay(3000);  
+    mySerial.write("ALERT TEMPERATURE HIGH DETECTED");
+    mySerial.write(0x1A);delay(4000);delay(4000);
+    lcd.clear();                                                     
+  }
+  if( humi>75)
+     {
+      lcd.setCursor(3,0);
+      lcd.print(humi);
+      lcd.setCursor(11,0);
+      lcd.print(temp);
+      lcd.setCursor(3,1);
+      lcd.print("HIGH");
+      lcd.setCursor(11,1);
+      lcd.print("WET");
+      delay(2000);
+      digitalWrite(BUZ,HIGH);
+        delay(1500);
+      digitalWrite(BUZ,LOW);
+      digitalWrite(PUMP,HIGH);
+    mySerial.write("AT+CMGS=\"");
+    mySerial.write(pastnumber);
+    mySerial.write("\"\r\n");  delay(3000);  
+    mySerial.write("ALERT HUMIDITY HIGH DETECTED");
+    mySerial.write(0x1A);delay(4000);delay(4000);
+    lcd.clear();                                                     
+  }
+if(GAS==LOW&&humi<75&&temp<40&&MOI==LOW)
+{
+      lcd.setCursor(3,0);
+      lcd.print(humi);
+      lcd.setCursor(11,0);
+      lcd.print(temp);
+      lcd.setCursor(3,1);
+      lcd.print("HIGH");
+      lcd.setCursor(11,1);
+      lcd.print("WET");
+      delay(2000);
+  digitalWrite(PUMP,HIGH);
+  digitalWrite(BUZ,LOW);
+    lcd.clear();
+}
+if(mySerial.available()>0)
+      {
+    textMessage = mySerial.readString();
+    Serial.print(textMessage);    
+    delay(10);
+  } 
+}
+void serialEvent() 
+{
+  while (mySerial.available()) 
+        { 
+         char inChar = (char)mySerial.read();
+           //sti++;
+           //inputString += inChar;
+          if(inChar == '*')
+            {sti=1;
+              inputString += inChar;
+             //  stringComplete = true;
+             // gchr = inputString[sti-1] 
+            }
+          if(sti == 1)
+            {
+                inputString += inChar;
+            }
+          if(inChar == '#')
+            {sti=0;
+              stringComplete = true;      
+            }
+        }
+}
+int readSerial(char result[]) 
+{
+  int i = 0;
+  while (1) 
+  {
+    while (mySerial.available() > 0) 
+    {
+      char inChar = mySerial.read();
+      if (inChar == '\n') 
+         {
+          result[i] = '\0';
+          mySerial.flush();
+          return 0;
+         }
+      if (inChar != '\r') 
+         {
+          result[i] = inChar;
+          i++;
+         }
+    }
+  }
+}
+int readSerial1(char result[]) 
+{
+  int i = 0;
+  while (1) 
+  {
+    while (mySerial.available() > 0) 
+    {
+      char inChar = mySerial.read();
+      if (inChar == '*') 
+         {
+          result[i] = '\0';
+          mySerial.flush();
+          return 0;
+         }
+      if (inChar != '*') 
+         {
+          result[i] = inChar;
+          i++;
+         }
+    }
+  }
+}
+void gsminit()
+{
+    Serial.print("SEND MSG STORE");
+  Serial.print("MOBILE NUMBER"); 
+  lcd.clear();
+  lcd.print("SEND MSG STORE"); 
+      lcd.setCursor(0, 1);
+      lcd.print("MOBILE NUMBER");
+  do{
+     rcv = mySerial.read();
+    }while(rcv != '*');
+     readSerial(pastnumber);
+     pastnumber[10]='\0';
+  Serial.print(pastnumber);
+    lcd.clear();
+     lcd.print(pastnumber);
+     delay(1000);
+   mySerial.write("AT+CMGS=\"");
+   mySerial.write(pastnumber);
+   mySerial.write("\"\r\n"); delay(3000);
+   mySerial.write("Mobile no. registered\r\n");
+   mySerial.write(0x1A);    
+   delay(4000);delay(5000);  
+  //delay(1000);
+}
